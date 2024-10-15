@@ -14,9 +14,15 @@ html, body {
 	position: absolute;
 	top: 0;
 	left: 0;
+	width: 0;
+	height: 0;
+	visibility: hidden;
+	z-index: -1;
+}
+#canvas {
 	width: 100%;
 	height: 100%;
-	background: rgb(30, 30, 30);
+	vertical-align: top;
 }
 #message {
 	position: absolute;
@@ -36,19 +42,59 @@ html, body {
 	box-sizing: border-box;
 	text-shadow: 0 0 5px black;
 }
+
+.loader-container {
+	width: 100%;
+    height: 100%;
+    position: absolute;
+    justify-content: center;
+    align-items: center;
+    background: rgb(30, 30, 30);
+	display: none;
+}
+
+.loader-container.show {
+	display: flex;
+}
+
+.loader {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #FFF;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+    }
+
+    @keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+} 
 </style>
 </head>
 <body>
-
-<video id="video"></video>
-<div id="message"></div>
+	<div id="loading" class="loader-container show">
+		<span class="loader"></span>
+	</div>
+	<canvas id="canvas"></canvas>
+	<video id="video"></video>
+	<div id="message"></div>
 
 <script>
 
 const retryPause = 2000;
 
+const loading = document.getElementById('loading');
+const canvas = document.getElementById('canvas');
 const video = document.getElementById('video');
 const message = document.getElementById('message');
+const ctx = canvas.getContext('2d');
 
 let nonAdvertisedCodecs = [];
 let pc = null;
@@ -57,6 +103,7 @@ let sessionUrl = '';
 let offerData = '';
 let queuedCandidates = [];
 let defaultControls = false;
+
 
 const setMessage = (str) => {
 	if (str !== '') {
@@ -536,16 +583,35 @@ const requestICEServers = () => {
 
 const loadAttributesFromQuery = () => {
 	const params = new URLSearchParams(window.location.search);
-	video.controls = parseBoolString(params.get('controls'), true);
 	video.muted = parseBoolString(params.get('muted'), true);
 	video.autoplay = parseBoolString(params.get('autoplay'), true);
-	video.playsInline = parseBoolString(params.get('playsinline'), true);
 	defaultControls = video.controls;
 };
+
+
+
+const drawFrame = ()=> {
+	ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+	requestAnimationFrame(drawFrame)
+}
+
+const replicateVideoToCanvas = ()=> {
+	canvas.width = video.videoWidth;
+	canvas.height = video.videoHeight;
+
+	drawFrame()
+}
 
 const init = () => {
 	loadAttributesFromQuery();
 	getNonAdvertisedCodecs();
+
+	video.addEventListener('play', ()=> {
+		replicateVideoToCanvas();
+		setTimeout(()=> {
+			loading.classList.remove('show');
+		}, 1000)
+	})
 };
 
 window.addEventListener('DOMContentLoaded', init);
