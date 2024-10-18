@@ -608,9 +608,7 @@ const init = () => {
 
 	video.addEventListener('play', ()=> {
 		replicateVideoToCanvas();
-		setTimeout(()=> {
-			loading.classList.remove('show');
-		}, 1000)
+		loading.classList.remove('show');
 	})
 };
 
