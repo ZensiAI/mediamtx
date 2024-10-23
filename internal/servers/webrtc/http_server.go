@@ -2,7 +2,6 @@ package webrtc
 
 import (
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -47,34 +46,18 @@ func mergePathAndQuery(path string, rawQuery string) string {
 }
 
 func writeError(ctx *gin.Context, statusCode int, err error) {
-	// Verificar si el statusCode es diferente de 200
-	if statusCode != 200 {
-		// Verificar si el mensaje del error comienza con "authentication failed:"
-		if strings.HasPrefix(err.Error(), "authentication failed:") {
-			// Extraer la parte del mensaje que contiene el JSON
-			errorMessageParts := strings.SplitN(err.Error(), ":", 3)
-			if len(errorMessageParts) == 3 {
-				jsonPart := strings.TrimSpace(errorMessageParts[2])
+	// Verificar si el mensaje del error contiene "authentication failed"
+	if strings.Contains(err.Error(), "authentication failed") {
+		// Servir el HTML incrustado en caso de error de autenticación
+		ctx.Header("Content-Type", "text/html")
+		ctx.Writer.WriteHeader(statusCode)
 
-				// Intentar parsear la parte del mensaje como JSON
-				var errorData map[string]interface{}
-				if err := json.Unmarshal([]byte(jsonPart), &errorData); err == nil {
-					// Verificar si el campo "valid" está presente y es false
-					if valid, exists := errorData["valid"].(bool); exists && !valid {
-						// Si valid está presente y es false, servir el HTML incrustado
-						ctx.Header("Content-Type", "text/html")
-						ctx.Writer.WriteHeader(statusCode)
-
-						// Escribir el HTML incrustado
-						ctx.Writer.Write(unauthorizedIndex)
-						return
-					}
-				}
-			}
-		}
+		// Escribir el HTML incrustado
+		ctx.Writer.Write(unauthorizedIndex)
+		return
 	}
 
-	// Respuesta JSON por defecto si el campo "valid" no está presente, es true, o el statusCode es 200
+	// Respuesta JSON por defecto para cualquier otro error
 	ctx.JSON(statusCode, gin.H{"error": err.Error()})
 }
 
